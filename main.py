@@ -8,7 +8,6 @@ from telebot import TeleBot
 API_KEY = os.getenv('API_KEY')
 API_SECRET = os.getenv('API_SECRET')
 BOT_TOKEN = os.getenv('BOT_TOKEN')
-PRICE_CHECK_DELAY = 30
 
 bot = TeleBot(BOT_TOKEN)
 client = Spot(api_key=API_KEY, api_secret=API_SECRET)
@@ -34,12 +33,18 @@ def get_crypto_abbr(m):
 
 def get_price(m, crypto_abbr):
     price = float(m.text)
+    bot.send_message(m.chat.id, 'How often should I check the price? Specify the delay in minutes.')
+    bot.register_next_step_handler(m, get_price_check_delay, crypto_abbr, price)
+
+
+def get_price_check_delay(m, crypto_abbr, price):
+    delay = int(m.text)
     bot.send_message(m.chat.id, 'You will be notified as soon as the price goes up.')
-    run_scheduled_task(m.chat.id, crypto_abbr, price)
+    run_scheduled_task(m.chat.id, crypto_abbr, price, delay)
 
 
-def run_scheduled_task(chat_id, crypto_abbr, price):
-    (schedule.every(PRICE_CHECK_DELAY)
+def run_scheduled_task(chat_id, crypto_abbr, price, delay):
+    (schedule.every(delay)
      .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, price=price))
     Thread(target=schedule_checker).start()
 
