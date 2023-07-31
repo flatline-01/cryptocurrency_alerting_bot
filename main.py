@@ -54,7 +54,7 @@ def compare_prices(chat_id, crypto_abbr, price):
     avg_price = float(get_avg_price(crypto_abbr))
     if avg_price >= price:
         bot.send_message(chat_id,
-                         f'The price of {crypto_abbr} has gone up. It\'s now at {avg_price}.')
+                         f'The price of {crypto_abbr} has gone up. It\'s now at {avg_price:.3f}')
 
 
 def get_avg_price(currency):
