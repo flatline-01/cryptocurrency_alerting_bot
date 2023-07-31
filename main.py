@@ -4,6 +4,7 @@ import time
 from threading import Thread
 from binance.spot import Spot
 from telebot import TeleBot
+from telebot.types import ReplyKeyboardMarkup, KeyboardButton
 
 API_KEY = os.getenv('API_KEY')
 API_SECRET = os.getenv('API_SECRET')
@@ -15,10 +16,12 @@ client = Spot(api_key=API_KEY, api_secret=API_SECRET)
 
 @bot.message_handler(commands=['start'])
 def greet(m):
-    bot.send_message(m.chat.id, 'Hey there')
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton('Create an alert'))
+    bot.send_message(m.chat.id, 'Hey there', reply_markup=markup)
 
 
-@bot.message_handler(commands=['alert'])
+@bot.message_handler(func=lambda message: 'Create an alert')
 def alert(m):
     bot.send_message(m.chat.id, 'Provide a crypto code:')
     bot.register_next_step_handler(m, get_crypto_abbr)
