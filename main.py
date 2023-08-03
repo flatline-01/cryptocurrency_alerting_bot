@@ -23,32 +23,43 @@ def greet(m):
 
 @bot.message_handler(func=lambda message: 'Create an alert')
 def alert(m):
-    bot.send_message(m.chat.id, 'Provide a crypto code:')
+    bot.send_message(m.chat.id, 'Provide a cryptocurrency abbreviation:')
     bot.register_next_step_handler(m, get_crypto_abbr)
 
 
 def get_crypto_abbr(m):
     crypto_abbr = m.text
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton('above'))
+    markup.add(KeyboardButton('below'))
+    bot.send_message(m.chat.id,
+                     'Do you want to get notified when a coin goes above or below a price target?',
+                     reply_markup=markup)
+    bot.register_next_step_handler(m, get_option, crypto_abbr)
+
+
+def get_option(m, crypto_abbr):
+    option = m.text
     bot.send_message(m.chat.id,
                      'Provide the price of the cryptocurrency, after which the notification should be sent: ')
-    bot.register_next_step_handler(m, get_price, crypto_abbr)
+    bot.register_next_step_handler(m, get_price, crypto_abbr, option)
 
 
-def get_price(m, crypto_abbr):
+def get_price(m, crypto_abbr, option):
     price = float(m.text)
     bot.send_message(m.chat.id, 'How often should I check the price? Specify the delay in minutes.')
-    bot.register_next_step_handler(m, get_price_check_delay, crypto_abbr, price)
+    bot.register_next_step_handler(m, get_price_check_delay, crypto_abbr, option, price)
 
 
-def get_price_check_delay(m, crypto_abbr, price):
+def get_price_check_delay(m, crypto_abbr, option, price):
     delay = int(m.text)
-    bot.send_message(m.chat.id, 'You will be notified as soon as the price goes up.')
-    run_scheduled_task(m.chat.id, crypto_abbr, price, delay)
+    bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.')
+    run_scheduled_task(m.chat.id, crypto_abbr, option, price, delay)
 
 
-def run_scheduled_task(chat_id, crypto_abbr, price, delay):
+def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
     (schedule.every(delay)
-     .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, price=price))
+     .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, option=option, price=price))
     Thread(target=schedule_checker).start()
 
 
@@ -58,11 +69,17 @@ def schedule_checker():
         time.sleep(1)
 
 
-def compare_prices(chat_id, crypto_abbr, price):
+def compare_prices(chat_id, crypto_abbr, option, price):
     avg_price = float(get_avg_price(crypto_abbr))
-    if avg_price >= price:
-        bot.send_message(chat_id,
-                         f'The price of {crypto_abbr} has gone up. It\'s now at {avg_price:.3f}')
+
+    if option == 'above':
+        if avg_price > price:
+            bot.send_message(chat_id,
+                             f'The price of {crypto_abbr} has gone up. It\'s now at {avg_price:.3f}')
+    elif option == 'below':
+        if avg_price < price:
+            bot.send_message(chat_id,
+                             f'The price of {crypto_abbr} has dropped. It\'s now at {avg_price:.3f}')
 
 
 def get_avg_price(currency):
