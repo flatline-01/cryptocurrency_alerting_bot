@@ -29,7 +29,7 @@ def greet(m):
     bot.send_message(m.chat.id, 'Hey there', reply_markup=markup)
 
 
-@bot.message_handler(func=lambda message: 'Create an alert')
+@bot.message_handler(func=lambda message: message.text == 'Create an alert')
 def alert(m):
     bot.send_message(m.chat.id, 'Provide a cryptocurrency abbreviation:')
     bot.register_next_step_handler(m, get_crypto_abbr)
