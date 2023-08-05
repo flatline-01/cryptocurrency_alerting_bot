@@ -36,7 +36,7 @@ def alert(m):
 
 
 def get_crypto_abbr(m):
-    crypto_abbr = m.text
+    crypto_abbr = str.upper(m.text)
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(KeyboardButton('above'))
     markup.add(KeyboardButton('below'))
@@ -49,7 +49,7 @@ def get_crypto_abbr(m):
 def get_option(m, crypto_abbr):
     option = m.text
     bot.send_message(m.chat.id,
-                     'Provide the price of the cryptocurrency, after which the notification should be sent: ')
+                     'Provide the dollar price of the cryptocurrency, after which the notification should be sent: ')
     bot.register_next_step_handler(m, get_price, crypto_abbr, option)
 
 
@@ -60,8 +60,12 @@ def get_price(m, crypto_abbr, option):
 
 
 def get_price_check_delay(m, crypto_abbr, option, price):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton('Create an alert'))
+    markup.add(KeyboardButton('View my alerts'))
     delay = int(m.text)
-    bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.')
+    bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.',
+                     reply_markup=markup)
     run_scheduled_task(m.chat.id, crypto_abbr, option, price, delay)
 
 
@@ -86,7 +90,6 @@ def schedule_checker():
 
 def compare_prices(chat_id, crypto_abbr, option, price):
     avg_price = float(get_avg_price(crypto_abbr))
-
     if option == 'above':
         if avg_price > price:
             bot.send_message(chat_id,
@@ -98,7 +101,23 @@ def compare_prices(chat_id, crypto_abbr, option, price):
 
 
 def get_avg_price(currency):
-    return float(client.avg_price(symbol=f'{str.upper(currency)}USDT')['price'])
+    return float(client.avg_price(symbol=f'{currency}USDT')['price'])
+
+
+@bot.message_handler(func=lambda message: message.text == 'View my alerts')
+def view_alerts(m):
+    alerts = read_all(m.chat.id)
+    i = 0
+    for a in alerts:
+        i += 1
+        bot.send_message(m.chat.id, f'Alert№{i}\n\n'
+                                    f'A notification will be sent as soon as {a[1]} goes {a[5]} the price of {a[2]}$. '
+                                    f'Checking will occur every {a[4]} minutes.')
+
+
+def read_all(tg_id):
+    cursor.execute('SELECT * FROM alerts WHERE telegram_id = %s', (tg_id, ))
+    return cursor.fetchall()
 
 
 bot.infinity_polling()
