@@ -63,6 +63,7 @@ def get_price_check_delay(m, crypto_abbr, option, price):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(KeyboardButton('Create an alert'))
     markup.add(KeyboardButton('View my alerts'))
+    markup.add(KeyboardButton('Remove all alerts'))
     delay = int(m.text)
     bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.',
                      reply_markup=markup)
@@ -118,6 +119,36 @@ def view_alerts(m):
 def read_all(tg_id):
     cursor.execute('SELECT * FROM alerts WHERE telegram_id = %s', (tg_id, ))
     return cursor.fetchall()
+
+
+@bot.message_handler(func=lambda message: message.text == 'Remove all alerts')
+def remove_all_alerts(m):
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton('Yes'))
+    markup.add(KeyboardButton('No'))
+    bot.send_message(m.chat.id, 'Do you really want to remove all your alerts?', reply_markup=markup)
+    bot.register_next_step_handler(m, handle_yes_no_answers,
+                                   confirm_all_alerts_deletion, deny_all_alerts_deletion)
+
+
+def handle_yes_no_answers(m, confirm_callback, deny_callback):
+    match m.text:
+        case 'Yes': confirm_callback(m.chat.id)
+        case 'No' : deny_callback(m.chat.id)
+
+
+def confirm_all_alerts_deletion(tg_id):
+    remove_all(tg_id)
+    bot.send_message(tg_id, 'Your alerts have just been deleted.')
+
+
+def deny_all_alerts_deletion(tg_id):
+    bot.send_message(tg_id, 'Ok')
+
+
+def remove_all(tg_id):
+    cursor.execute('DELETE FROM alerts WHERE telegram_id = %s', (tg_id, ))
+    connection.commit()
 
 
 bot.infinity_polling()
