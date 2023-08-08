@@ -111,9 +111,13 @@ def view_alerts(m):
     i = 0
     for a in alerts:
         i += 1
-        bot.send_message(m.chat.id, f'Alert№{i}\n\n'
-                                    f'A notification will be sent as soon as {a[1]} goes {a[5]} the price of {a[2]}$. '
-                                    f'Checking will occur every {a[4]} minutes.')
+        message = (f'Alert№{i}\n\nA notification will be sent as soon as {a[1]} goes {a[5]} the price of {a[2]}$.\n'
+                   f'Checking will occur every ')
+        if a[4] == 1:
+            message += 'minute.'
+        else:
+            message += f'{a[4]} minutes.'
+        bot.send_message(m.chat.id, message)
 
 
 def read_all(tg_id):
