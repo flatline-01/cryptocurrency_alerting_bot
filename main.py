@@ -22,14 +22,21 @@ connection = psycopg.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD,
 cursor = connection.cursor()
 
 
+buttons = {
+    'create': 'Create an alert',
+    'view_all': 'View my alerts',
+    'remove_all': 'Remove all alerts'
+}
+
+
 @bot.message_handler(commands=['start'])
 def greet(m):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton('Create an alert'))
+    markup.add(KeyboardButton(buttons.get('create')))
     bot.send_message(m.chat.id, 'Hey there', reply_markup=markup)
 
 
-@bot.message_handler(func=lambda message: message.text == 'Create an alert')
+@bot.message_handler(func=lambda message: message.text == buttons.get('create'))
 def alert(m):
     bot.send_message(m.chat.id, 'Provide a cryptocurrency abbreviation:')
     bot.register_next_step_handler(m, get_crypto_abbr)
@@ -61,9 +68,9 @@ def get_price(m, crypto_abbr, option):
 
 def get_price_check_delay(m, crypto_abbr, option, price):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton('Create an alert'))
-    markup.add(KeyboardButton('View my alerts'))
-    markup.add(KeyboardButton('Remove all alerts'))
+    markup.add(KeyboardButton(buttons.get('create')))
+    markup.add(KeyboardButton(buttons.get('view_all')))
+    markup.add(KeyboardButton(buttons.get('remove_all')))
     delay = int(m.text)
     bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.',
                      reply_markup=markup)
@@ -105,13 +112,13 @@ def get_avg_price(currency):
     return float(client.avg_price(symbol=f'{currency}USDT')['price'])
 
 
-@bot.message_handler(func=lambda message: message.text == 'View my alerts')
+@bot.message_handler(func=lambda message: message.text == buttons.get('view_all'))
 def view_alerts(m):
     alerts = read_all(m.chat.id)
     i = 0
     if len(alerts) == 0:
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(KeyboardButton('Create an alert'))
+        markup.add(KeyboardButton(buttons.get('create')))
         bot.send_message(m.chat.id, 'You don\'t have any alerts yet. Press the button to create a new alert.',
                          reply_markup=markup)
     else:
@@ -131,7 +138,7 @@ def read_all(tg_id):
     return cursor.fetchall()
 
 
-@bot.message_handler(func=lambda message: message.text == 'Remove all alerts')
+@bot.message_handler(func=lambda message: message.text == buttons.get('remove_all'))
 def remove_all_alerts(m):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(KeyboardButton('Yes'))
