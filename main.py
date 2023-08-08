@@ -109,15 +109,21 @@ def get_avg_price(currency):
 def view_alerts(m):
     alerts = read_all(m.chat.id)
     i = 0
-    for a in alerts:
-        i += 1
-        message = (f'Alert№{i}\n\nA notification will be sent as soon as {a[1]} goes {a[5]} the price of {a[2]}$.\n'
-                   f'Checking will occur every ')
-        if a[4] == 1:
-            message += 'minute.'
-        else:
-            message += f'{a[4]} minutes.'
-        bot.send_message(m.chat.id, message)
+    if len(alerts) == 0:
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(KeyboardButton('Create an alert'))
+        bot.send_message(m.chat.id, 'You don\'t have any alerts yet. Press the button to create a new alert.',
+                         reply_markup=markup)
+    else:
+        for a in alerts:
+            i += 1
+            message = (f'Alert№{i}\n\nA notification will be sent as soon as {a[1]} goes {a[5]} the price of {a[2]}$.\n'
+                       f'Checking will occur every ')
+            if a[4] == 1:
+                message += 'minute.'
+            else:
+                message += f'{a[4]} minutes.'
+            bot.send_message(m.chat.id, message)
 
 
 def read_all(tg_id):
