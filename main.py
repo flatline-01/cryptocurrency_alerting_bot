@@ -1,7 +1,7 @@
 import os
 import schedule
 import time
-import psycopg
+import db
 from threading import Thread
 from binance.spot import Spot
 from telebot import TeleBot
@@ -13,13 +13,6 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 bot = TeleBot(BOT_TOKEN)
 client = Spot(api_key=API_KEY, api_secret=API_SECRET)
-
-DB_NAME = os.getenv('DB_NAME')
-DB_USER = os.getenv('DB_USER')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
-
-connection = psycopg.connect(dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD, host='localhost')
-cursor = connection.cursor()
 
 
 buttons = {
@@ -78,16 +71,10 @@ def get_price_check_delay(m, crypto_abbr, option, price):
 
 
 def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
-    save_alert(chat_id, crypto_abbr, option, price, delay)
+    db.save_alert(chat_id, crypto_abbr, option, price, delay)
     (schedule.every(delay)
      .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, option=option, price=price))
     Thread(target=schedule_checker).start()
-
-
-def save_alert(tg_id, crypto_abbr, option, price, delay):
-    cursor.execute('INSERT INTO alerts (currency_abbr, price, telegram_id, delay, option) VALUES (%s,%s,%s,%s,%s)',
-                   (crypto_abbr, price, tg_id, delay, option, ))
-    connection.commit()
 
 
 def schedule_checker():
@@ -114,7 +101,7 @@ def get_avg_price(currency):
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('view_all'))
 def view_alerts(m):
-    alerts = read_all(m.chat.id)
+    alerts = db.read_all(m.chat.id)
     i = 0
     if len(alerts) == 0:
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -131,11 +118,6 @@ def view_alerts(m):
             else:
                 message += f'{a[4]} minutes.'
             bot.send_message(m.chat.id, message)
-
-
-def read_all(tg_id):
-    cursor.execute('SELECT * FROM alerts WHERE telegram_id = %s', (tg_id, ))
-    return cursor.fetchall()
 
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('remove_all'))
@@ -155,17 +137,12 @@ def handle_yes_no_answers(m, confirm_callback, deny_callback):
 
 
 def confirm_all_alerts_deletion(tg_id):
-    remove_all(tg_id)
+    db.remove_all(tg_id)
     bot.send_message(tg_id, 'Your alerts have just been deleted.')
 
 
 def deny_all_alerts_deletion(tg_id):
     bot.send_message(tg_id, 'Ok')
-
-
-def remove_all(tg_id):
-    cursor.execute('DELETE FROM alerts WHERE telegram_id = %s', (tg_id, ))
-    connection.commit()
 
 
 bot.infinity_polling()
