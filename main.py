@@ -5,7 +5,7 @@ import db
 from threading import Thread
 from binance.spot import Spot
 from telebot import TeleBot
-from telebot.types import ReplyKeyboardMarkup, KeyboardButton
+from telebot.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 
 API_KEY = os.getenv('API_KEY')
 API_SECRET = os.getenv('API_SECRET')
@@ -13,7 +13,6 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 bot = TeleBot(BOT_TOKEN)
 client = Spot(api_key=API_KEY, api_secret=API_SECRET)
-
 
 buttons = {
     'create': 'Create an alert',
@@ -31,7 +30,8 @@ def greet(m):
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('create'))
 def alert(m):
-    bot.send_message(m.chat.id, 'Provide a cryptocurrency abbreviation:')
+    rm = ReplyKeyboardRemove()  # remove custom keyboard
+    bot.send_message(m.chat.id, 'Provide a cryptocurrency abbreviation:', reply_markup=rm)
     bot.register_next_step_handler(m, get_crypto_abbr)
 
 
@@ -47,9 +47,11 @@ def get_crypto_abbr(m):
 
 
 def get_option(m, crypto_abbr):
+    rm = ReplyKeyboardRemove()
     option = m.text
     bot.send_message(m.chat.id,
-                     'Provide the dollar price of the cryptocurrency, after which the notification should be sent: ')
+                     'Provide the dollar price of the cryptocurrency, after which the notification should be sent: ',
+                     reply_markup=rm)
     bot.register_next_step_handler(m, get_price, crypto_abbr, option)
 
 
@@ -60,13 +62,10 @@ def get_price(m, crypto_abbr, option):
 
 
 def get_price_check_delay(m, crypto_abbr, option, price):
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton(buttons.get('create')))
-    markup.add(KeyboardButton(buttons.get('view_all')))
-    markup.add(KeyboardButton(buttons.get('remove_all')))
+    menu = get_menu_markup()
     delay = int(m.text)
     bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.',
-                     reply_markup=markup)
+                     reply_markup=menu)
     run_scheduled_task(m.chat.id, crypto_abbr, option, price, delay)
 
 
@@ -132,17 +131,29 @@ def remove_all_alerts(m):
 
 def handle_yes_no_answers(m, confirm_callback, deny_callback):
     match m.text:
-        case 'Yes': confirm_callback(m.chat.id)
-        case 'No' : deny_callback(m.chat.id)
+        case 'Yes':
+            confirm_callback(m.chat.id)
+        case 'No':
+            deny_callback(m.chat.id)
 
 
 def confirm_all_alerts_deletion(tg_id):
     db.remove_all(tg_id)
-    bot.send_message(tg_id, 'Your alerts have just been deleted.')
+    menu = get_menu_markup()
+    bot.send_message(tg_id, 'Your alerts have just been deleted.', reply_markup=menu)
 
 
 def deny_all_alerts_deletion(tg_id):
-    bot.send_message(tg_id, 'Ok')
+    menu = get_menu_markup()
+    bot.send_message(tg_id, 'Ok', reply_markup=menu)
+
+
+def get_menu_markup():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton(buttons.get('create')))
+    markup.add(KeyboardButton(buttons.get('view_all')))
+    markup.add(KeyboardButton(buttons.get('remove_all')))
+    return markup
 
 
 bot.infinity_polling()
