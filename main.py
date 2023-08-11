@@ -2,17 +2,14 @@ import os
 import schedule
 import time
 import db
+from exchange import get_avg_price
 from threading import Thread
-from binance.spot import Spot
 from telebot import TeleBot
 from telebot.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 
-API_KEY = os.getenv('API_KEY')
-API_SECRET = os.getenv('API_SECRET')
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
 bot = TeleBot(BOT_TOKEN)
-client = Spot(api_key=API_KEY, api_secret=API_SECRET)
 
 buttons = {
     'create': 'Create an alert',
@@ -137,10 +134,6 @@ def compare_prices(chat_id, crypto_abbr, option, price):
         if avg_price < price:
             bot.send_message(chat_id,
                              f'The price of {crypto_abbr} has dropped. It\'s now at {avg_price:.3f}')
-
-
-def get_avg_price(currency):
-    return float(client.avg_price(symbol=f'{currency}USDT')['price'])
 
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('view_all'))
