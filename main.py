@@ -47,12 +47,57 @@ def get_crypto_abbr(m):
 
 
 def get_option(m, crypto_abbr):
-    rm = ReplyKeyboardRemove()
     option = m.text
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton('$'))
+    markup.add(KeyboardButton('%'))
     bot.send_message(m.chat.id,
-                     'Provide the dollar price of the cryptocurrency, after which the notification should be sent: ',
-                     reply_markup=rm)
+                     'Specify the dollar price or percentage of the current average price '
+                     'of the cryptocurrency after which the notification should be sent:',
+                     reply_markup=markup)
+    bot.register_next_step_handler(m, price_or_percent_handler, crypto_abbr, option)
+
+
+def price_or_percent_handler(m, crypto_abbr, option):
+    user_selection = m.text
+    match user_selection:
+        case '$': ask_for_price(m, crypto_abbr, option)
+        case '%': ask_for_percent(m, crypto_abbr, option)
+
+
+def ask_for_price(m, crypto_abbr, option):
+    rm = ReplyKeyboardRemove()
+    bot.send_message(m.chat.id, 'Provide a price:', reply_markup=rm)
     bot.register_next_step_handler(m, get_price, crypto_abbr, option)
+
+
+def ask_for_percent(m, crypto_abbr, option):
+    rm = ReplyKeyboardRemove()
+    avg_price = get_avg_price(crypto_abbr)
+    bot.send_message(m.chat.id,
+                     f'Provide a percentage of the current average price, which is {avg_price}:',
+                     reply_markup=rm)
+    bot.register_next_step_handler(m, get_percent, crypto_abbr, option)
+
+
+def get_percent(m, crypto_abbr, option):
+    rm = ReplyKeyboardRemove()
+    percent = float(m.text)
+    avg_price = get_avg_price(crypto_abbr)
+    price = calculate_price(avg_price, percent, option)
+    bot.send_message(m.chat.id, f'Ok, I will send you a message when the price will reach {price}')
+    bot.send_message(m.chat.id,
+                     'How often should I check the price? Specify the delay in minutes.',
+                     reply_markup=rm)
+    bot.register_next_step_handler(m, get_price_check_delay, crypto_abbr, option, price)
+
+
+def calculate_price(avg_price, percent, option):
+    price = None
+    match option:
+        case 'above': price = avg_price + percent * avg_price / 100
+        case 'below': price = avg_price - percent * avg_price / 100
+    return price
 
 
 def get_price(m, crypto_abbr, option):
