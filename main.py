@@ -194,4 +194,10 @@ def get_menu_markup():
     return markup
 
 
+@bot.message_handler(func=lambda message: True)
+def handle_other_messages(m):
+    menu = get_menu_markup()
+    bot.send_message(m.chat.id, 'Sorry, I don\'t understand you. Use the buttons below.', reply_markup=menu)
+
+
 bot.infinity_polling()
