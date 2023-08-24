@@ -7,6 +7,7 @@ from threading import Thread
 from telebot import TeleBot
 from telebot.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 import bot_messages as messages
+from telebot.formatting import escape_markdown
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
@@ -133,21 +134,21 @@ def compare_prices(chat_id, crypto_abbr, option, price):
 @bot.message_handler(func=lambda message: message.text == buttons.get('view_all'))
 def view_alerts(m):
     alerts = db.read_all(m.chat.id)
-    i = 0
     if len(alerts) == 0:
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add(KeyboardButton(buttons.get('create')))
         bot.send_message(m.chat.id, messages.NO_ALERTS, reply_markup=markup)
     else:
         for a in alerts:
-            i += 1
-            message = (f'Alert№{i}\n\nA notification will be sent as soon as {a[1]} goes {a[5]} the price of {a[2]}$.\n'
+            message = (f'Alert№`{a[0]}`\n\nA notification will be sent as soon as {a[1]} goes '
+                       f'{a[5]} the price of {a[2]}$.\n'
                        f'Checking will occur every ')
             if a[4] == 1:
                 message += 'minute.'
             else:
                 message += f'{a[4]} minutes.'
-            bot.send_message(m.chat.id, message)
+            message = escape_markdown(message).replace('\\', '', 2)
+            bot.send_message(m.chat.id, message, parse_mode='MarkdownV2')
 
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('remove_all'))
