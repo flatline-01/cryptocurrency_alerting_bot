@@ -106,17 +106,16 @@ def get_price_check_delay(m, crypto_abbr, option, price):
     run_scheduled_task(m.chat.id, crypto_abbr, option, price, delay)
 
 
-def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
-    db.save_alert(chat_id, crypto_abbr, option, price, delay)
-    (schedule.every(delay)
-     .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, option=option, price=price))
-    Thread(target=schedule_checker).start()
-
-
 def schedule_checker():
     while True:
         schedule.run_pending()
         time.sleep(1)
+
+
+def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
+    db.save_alert(chat_id, crypto_abbr, option, price, delay)
+    (schedule.every(delay)
+     .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, option=option, price=price))
 
 
 def compare_prices(chat_id, crypto_abbr, option, price):
@@ -193,5 +192,8 @@ def handle_other_messages(m):
     menu = get_menu_markup()
     bot.send_message(m.chat.id, messages.NO_SUCH_COMMAND, reply_markup=menu)
 
+
+if __name__ == '__main__':
+    Thread(target=schedule_checker).start()
 
 bot.infinity_polling()
