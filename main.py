@@ -25,6 +25,9 @@ buttons = {
 def greet(m):
     if user_exists(m.chat.id):
         markup = get_menu_markup()
+        alerts = db.read_all(m.chat.id)
+        for a in alerts:
+            run_scheduled_task(a[3], a[1], a[5], a[2], a[4])
     else:
         db.save_user(m.chat.id)
         markup = ReplyKeyboardMarkup(resize_keyboard=True)
@@ -108,6 +111,7 @@ def get_price_check_delay(m, crypto_abbr, option, price):
     delay = int(m.text)
     bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.',
                      reply_markup=menu)
+    db.save_alert(m.chat.id, crypto_abbr, option, price, delay)
     run_scheduled_task(m.chat.id, crypto_abbr, option, price, delay)
 
 
@@ -118,7 +122,6 @@ def schedule_checker():
 
 
 def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
-    db.save_alert(chat_id, crypto_abbr, option, price, delay)
     (schedule.every(delay)
      .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, option=option, price=price))
 
