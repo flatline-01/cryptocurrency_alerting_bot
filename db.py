@@ -23,3 +23,18 @@ def read_all(tg_id):
 def remove_all(tg_id):
     cursor.execute('DELETE FROM alerts WHERE telegram_id = %s', (tg_id, ))
     connection.commit()
+
+
+def get_alert_by_user_id_and_alert_id(user_id, alert_id):
+    cursor.execute('SELECT * FROM alerts WHERE telegram_id = %s AND id = %s', (user_id, alert_id, ))
+    return cursor.fetchall()
+
+
+def get_alert_by_id(alert_id):
+    cursor.execute('SELECT * FROM alerts WHERE id = %s', (alert_id, ))
+    return cursor.fetchone()
+
+
+def remove_by_id(alert_id):
+    cursor.execute('DELETE FROM alerts WHERE id = %s', (alert_id, ))
+    connection.commit()

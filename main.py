@@ -16,6 +16,7 @@ bot = TeleBot(BOT_TOKEN)
 buttons = {
     'create': 'Create an alert',
     'view_all': 'View my alerts',
+    'remove_one': 'Remove an alert',
     'remove_all': 'Remove all alerts'
 }
 
@@ -183,8 +184,39 @@ def get_menu_markup():
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(KeyboardButton(buttons.get('create')))
     markup.add(KeyboardButton(buttons.get('view_all')))
+    markup.add(KeyboardButton(buttons.get('remove_one')))
     markup.add(KeyboardButton(buttons.get('remove_all')))
     return markup
+
+
+@bot.message_handler(func=lambda message: message.text == buttons.get('remove_one'))
+def remove_alert_by_id(m):
+    bot.send_message(m.chat.id, messages.PROVIDE_ALERT_ID)
+    bot.register_next_step_handler(m, handle_alert_id)
+
+
+def handle_alert_id(m):
+    alert_id = m.text
+    if alert_exists(alert_id) and user_has_alert(m.chat.id, alert_id):
+        db.remove_by_id(alert_id)
+        bot.send_message(m.chat.id, f'The alert with id {alert_id} has been deleted successfully.')
+    else:
+        bot.send_message(m.chat.id, messages.NO_ALERTS_WITH_SUCH_ID)
+
+
+def alert_exists(alert_id):
+    exists = False
+    print(db.get_alert_by_id(alert_id))
+    if len(db.get_alert_by_id(alert_id)) != 0:
+        exists = True
+    return exists
+
+
+def user_has_alert(user_id, alert_id):
+    has = False
+    if len(db.get_alert_by_user_id_and_alert_id(user_id, alert_id)) != 0:
+        has = True
+    return has
 
 
 @bot.message_handler(func=lambda message: True)
