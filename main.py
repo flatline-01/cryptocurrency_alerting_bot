@@ -23,8 +23,12 @@ buttons = {
 
 @bot.message_handler(commands=['start'])
 def greet(m):
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton(buttons.get('create')))
+    if user_exists(m.chat.id):
+        markup = get_menu_markup()
+    else:
+        db.save_user(m.chat.id)
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(KeyboardButton(buttons.get('create')))
     bot.send_message(m.chat.id, messages.GREETING, reply_markup=markup)
 
 
@@ -206,7 +210,6 @@ def handle_alert_id(m):
 
 def alert_exists(alert_id):
     exists = False
-    print(db.get_alert_by_id(alert_id))
     if len(db.get_alert_by_id(alert_id)) != 0:
         exists = True
     return exists
@@ -217,6 +220,13 @@ def user_has_alert(user_id, alert_id):
     if len(db.get_alert_by_user_id_and_alert_id(user_id, alert_id)) != 0:
         has = True
     return has
+
+
+def user_exists(user_id):
+    exists = False
+    if db.get_user_by_id(user_id) is not None:
+        exists = True
+    return exists
 
 
 @bot.message_handler(func=lambda message: True)
