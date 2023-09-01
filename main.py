@@ -2,7 +2,7 @@ import os
 import schedule
 import time
 import db
-from exchange import get_avg_price
+import exchange as ex
 from threading import Thread
 from telebot import TeleBot
 from telebot.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
@@ -44,11 +44,15 @@ def alert(m):
 
 def get_crypto_abbr(m):
     crypto_abbr = str.upper(m.text)
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton(messages.ABOVE))
-    markup.add(KeyboardButton(messages.BELOW))
-    bot.send_message(m.chat.id, messages.SPECIFY_OPTION, reply_markup=markup)
-    bot.register_next_step_handler(m, get_option, crypto_abbr)
+    if not ex.is_currency_supported(crypto_abbr):
+        markup = get_menu_markup()
+        bot.send_message(m.chat.id, messages.NO_SUCH_CURRENCY, reply_markup=markup)
+    else:
+        markup = ReplyKeyboardMarkup(resize_keyboard=True)
+        markup.add(KeyboardButton(messages.ABOVE))
+        markup.add(KeyboardButton(messages.BELOW))
+        bot.send_message(m.chat.id, messages.SPECIFY_OPTION, reply_markup=markup)
+        bot.register_next_step_handler(m, get_option, crypto_abbr)
 
 
 def get_option(m, crypto_abbr):
@@ -75,7 +79,7 @@ def ask_for_price(m, crypto_abbr, option):
 
 def ask_for_percent(m, crypto_abbr, option):
     rm = ReplyKeyboardRemove()
-    avg_price = get_avg_price(crypto_abbr)
+    avg_price = ex.get_avg_price(crypto_abbr)
     bot.send_message(m.chat.id,
                      f'Provide a percentage of the current average price. It is {avg_price} now.',
                      reply_markup=rm)
@@ -85,7 +89,7 @@ def ask_for_percent(m, crypto_abbr, option):
 def get_percent(m, crypto_abbr, option):
     rm = ReplyKeyboardRemove()
     percent = float(m.text)
-    avg_price = get_avg_price(crypto_abbr)
+    avg_price = ex.get_avg_price(crypto_abbr)
     price = calculate_price(avg_price, percent, option)
     bot.send_message(m.chat.id, f'Ok, I will send you a message when the price will reach {price}')
     bot.send_message(m.chat.id, messages.SPECIFY_DELAY, reply_markup=rm)
@@ -127,7 +131,7 @@ def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
 
 
 def compare_prices(chat_id, crypto_abbr, option, price):
-    avg_price = float(get_avg_price(crypto_abbr))
+    avg_price = float(ex.get_avg_price(crypto_abbr))
     if option == messages.ABOVE:
         if avg_price > price:
             bot.send_message(chat_id,

@@ -20,4 +20,4 @@ CONFIRM_TO_REMOVE = 'Do you really want to remove all your alerts?'
 ALERTS_HAVE_BEEN_DELETED = 'Your alerts have just been deleted.'
 NO_SUCH_COMMAND = 'Sorry, I don\'t understand you. Use the buttons below.'
 NO_ALERTS_WITH_SUCH_ID = 'You don\'t have any alerts with such id.\nTo view all your alerts press a button below.'
-
+NO_SUCH_CURRENCY = 'Currency is not supported.'
