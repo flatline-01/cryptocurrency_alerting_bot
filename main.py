@@ -106,17 +106,23 @@ def calculate_price(avg_price, percent, option):
 
 def get_price(m, crypto_abbr, option):
     price = float(m.text)
-    bot.send_message(m.chat.id, messages.SPECIFY_DELAY)
-    bot.register_next_step_handler(m, get_price_check_delay, crypto_abbr, option, price)
+    if price <= 0:
+        bot.send_message(m.chat.id, messages.INVALID_PRICE, reply_markup=get_menu_markup())
+    else:
+        bot.send_message(m.chat.id, messages.SPECIFY_DELAY)
+        bot.register_next_step_handler(m, get_price_check_delay, crypto_abbr, option, price)
 
 
 def get_price_check_delay(m, crypto_abbr, option, price):
     menu = get_menu_markup()
     delay = int(m.text)
-    bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.',
+    if delay <= 0:
+        bot.send_message(m.chat.id, messages.INVALID_DELAY, reply_markup=menu)
+    else:
+        bot.send_message(m.chat.id, f'You will be notified as soon as the price goes {option} the target price.',
                      reply_markup=menu)
-    db.save_alert(m.chat.id, crypto_abbr, option, price, delay)
-    run_scheduled_task(m.chat.id, crypto_abbr, option, price, delay)
+        db.save_alert(m.chat.id, crypto_abbr, option, price, delay)
+        run_scheduled_task(m.chat.id, crypto_abbr, option, price, delay)
 
 
 def schedule_checker():
