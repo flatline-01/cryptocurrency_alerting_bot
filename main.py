@@ -223,14 +223,14 @@ def handle_alert_id(m):
 
 def alert_exists(alert_id):
     exists = False
-    if len(db.get_alert_by_id(alert_id)) != 0:
+    if db.get_alert_by_id(alert_id) is not None:
         exists = True
     return exists
 
 
 def user_has_alert(user_id, alert_id):
     has = False
-    if len(db.get_alert_by_user_id_and_alert_id(user_id, alert_id)) != 0:
+    if db.get_alert_by_user_id_and_alert_id(user_id, alert_id) is not None:
         has = True
     return has
 
