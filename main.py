@@ -2,12 +2,15 @@ import os
 import schedule
 import time
 import db
+from dotenv import load_dotenv, find_dotenv
 import exchange as ex
 from threading import Thread
 from telebot import TeleBot
 from telebot.types import ReplyKeyboardMarkup, ReplyKeyboardRemove, KeyboardButton
 import bot_messages as messages
 from telebot.formatting import escape_markdown
+
+load_dotenv(find_dotenv())
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
@@ -19,7 +22,6 @@ buttons = {
     'remove_one': 'Remove an alert',
     'remove_all': 'Remove all alerts'
 }
-
 
 @bot.message_handler(commands=['start'])
 def greet(m):
@@ -35,6 +37,19 @@ def greet(m):
     bot.send_message(m.chat.id, messages.GREETING, reply_markup=markup)
 
 
+def get_menu_markup():
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton(buttons.get('create')))
+    markup.add(KeyboardButton(buttons.get('view_all')))
+    markup.add(KeyboardButton(buttons.get('remove_one')))
+    markup.add(KeyboardButton(buttons.get('remove_all')))
+    return markup
+
+def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
+    (schedule.every(delay)
+     .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, option=option, price=price))
+
+
 @bot.message_handler(func=lambda message: message.text == buttons.get('create'))
 def alert(m):
     rm = ReplyKeyboardRemove()  # remove custom keyboard
@@ -44,15 +59,11 @@ def alert(m):
 
 def get_crypto_abbr(m):
     crypto_abbr = str.upper(m.text)
-    if not ex.is_currency_supported(crypto_abbr):
-        markup = get_menu_markup()
-        bot.send_message(m.chat.id, messages.NO_SUCH_CURRENCY, reply_markup=markup)
-    else:
-        markup = ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add(KeyboardButton(messages.ABOVE))
-        markup.add(KeyboardButton(messages.BELOW))
-        bot.send_message(m.chat.id, messages.SPECIFY_OPTION, reply_markup=markup)
-        bot.register_next_step_handler(m, get_option, crypto_abbr)
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add(KeyboardButton(messages.ABOVE))
+    markup.add(KeyboardButton(messages.BELOW))
+    bot.send_message(m.chat.id, messages.SPECIFY_OPTION, reply_markup=markup)
+    bot.register_next_step_handler(m, get_option, crypto_abbr)
 
 
 def get_option(m, crypto_abbr):
@@ -131,11 +142,6 @@ def schedule_checker():
         time.sleep(1)
 
 
-def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
-    (schedule.every(delay)
-     .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, option=option, price=price))
-
-
 def compare_prices(chat_id, crypto_abbr, option, price):
     avg_price = float(ex.get_avg_price(crypto_abbr))
     if option == messages.ABOVE:
@@ -195,15 +201,6 @@ def confirm_all_alerts_deletion(tg_id):
 def deny_all_alerts_deletion(tg_id):
     menu = get_menu_markup()
     bot.send_message(tg_id, messages.OK, reply_markup=menu)
-
-
-def get_menu_markup():
-    markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton(buttons.get('create')))
-    markup.add(KeyboardButton(buttons.get('view_all')))
-    markup.add(KeyboardButton(buttons.get('remove_one')))
-    markup.add(KeyboardButton(buttons.get('remove_all')))
-    return markup
 
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('remove_one'))

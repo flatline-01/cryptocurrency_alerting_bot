@@ -1,0 +1,6 @@
+python-dotenv
+psycopg
+psycopg2-binary
+requests
+pytelegrambotapi
+schedule
