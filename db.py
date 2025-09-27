@@ -39,8 +39,8 @@ def get_alert_by_id(alert_id):
     return cursor.fetchone()
 
 
-def remove_by_id(alert_id):
-    cursor.execute('DELETE FROM alerts WHERE id = %s', (alert_id, ))
+def remove_by_id(alert_id, user_id):
+    cursor.execute('DELETE FROM alerts WHERE id = %s AND user_id = %s', (alert_id, user_id))
     connection.commit()
 
 

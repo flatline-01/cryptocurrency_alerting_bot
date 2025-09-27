@@ -23,6 +23,18 @@ buttons = {
     'remove_all': 'Remove all alerts'
 }
 
+price_movement_directions = {
+    'above': 'above',
+    'below': 'below'
+}
+
+options = {
+    'dollar_price': '$',
+    'percentage': '%'
+}
+
+# 'start' button press handling
+
 @bot.message_handler(commands=['start'])
 def greet(m):
     if user_exists(m.chat.id):
@@ -49,9 +61,10 @@ def run_scheduled_task(chat_id, crypto_abbr, option, price, delay):
     (schedule.every(delay)
      .minutes.do(compare_prices, chat_id=chat_id, crypto_abbr=crypto_abbr, option=option, price=price))
 
+# 'Create an alert' button press handling
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('create'))
-def alert(m):
+def create_alert(m):
     rm = ReplyKeyboardRemove()  # remove custom keyboard
     bot.send_message(m.chat.id, messages.PROVIDE_ABBR, reply_markup=rm)
     bot.register_next_step_handler(m, get_crypto_abbr)
@@ -60,8 +73,8 @@ def alert(m):
 def get_crypto_abbr(m):
     crypto_abbr = str.upper(m.text)
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton(messages.ABOVE))
-    markup.add(KeyboardButton(messages.BELOW))
+    markup.add(KeyboardButton(price_movement_directions['above']))
+    markup.add(KeyboardButton(price_movement_directions['below']))
     bot.send_message(m.chat.id, messages.SPECIFY_OPTION, reply_markup=markup)
     bot.register_next_step_handler(m, get_option, crypto_abbr)
 
@@ -69,8 +82,8 @@ def get_crypto_abbr(m):
 def get_option(m, crypto_abbr):
     option = m.text
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add(KeyboardButton(messages.DOLLAR))
-    markup.add(KeyboardButton(messages.PERCENT))
+    markup.add(KeyboardButton(options['dollar_price']))
+    markup.add(KeyboardButton(options['percentage']))
     bot.send_message(m.chat.id, messages.SPECIFY_PRICE_OR_PERCENT, reply_markup=markup)
     bot.register_next_step_handler(m, price_or_percent_handler, crypto_abbr, option)
 
@@ -78,14 +91,23 @@ def get_option(m, crypto_abbr):
 def price_or_percent_handler(m, crypto_abbr, option):
     user_selection = m.text
     match user_selection:
-        case messages.DOLLAR: ask_for_price(m, crypto_abbr, option)
-        case messages.PERCENT: ask_for_percent(m, crypto_abbr, option)
+        case '$': ask_for_price(m, crypto_abbr, option)
+        case '%': ask_for_percent(m, crypto_abbr, option)
 
 
 def ask_for_price(m, crypto_abbr, option):
     rm = ReplyKeyboardRemove()
     bot.send_message(m.chat.id, messages.PROVIDE_PRICE, reply_markup=rm)
     bot.register_next_step_handler(m, get_price, crypto_abbr, option)
+
+
+def get_price(m, crypto_abbr, option):
+    price = float(m.text)
+    if price <= 0:
+        bot.send_message(m.chat.id, messages.INVALID_PRICE, reply_markup=get_menu_markup())
+    else:
+        bot.send_message(m.chat.id, messages.SPECIFY_DELAY)
+        bot.register_next_step_handler(m, get_price_check_delay, crypto_abbr, option, price)
 
 
 def ask_for_percent(m, crypto_abbr, option):
@@ -110,18 +132,9 @@ def get_percent(m, crypto_abbr, option):
 def calculate_price(avg_price, percent, option):
     price = None
     match option:
-        case messages.ABOVE: price = avg_price + percent * avg_price / 100
-        case messages.BELOW: price = avg_price - percent * avg_price / 100
+        case 'above': price = avg_price + percent * avg_price / 100
+        case 'below': price = avg_price - percent * avg_price / 100
     return price
-
-
-def get_price(m, crypto_abbr, option):
-    price = float(m.text)
-    if price <= 0:
-        bot.send_message(m.chat.id, messages.INVALID_PRICE, reply_markup=get_menu_markup())
-    else:
-        bot.send_message(m.chat.id, messages.SPECIFY_DELAY)
-        bot.register_next_step_handler(m, get_price_check_delay, crypto_abbr, option, price)
 
 
 def get_price_check_delay(m, crypto_abbr, option, price):
@@ -144,15 +157,16 @@ def schedule_checker():
 
 def compare_prices(chat_id, crypto_abbr, option, price):
     avg_price = float(ex.get_avg_price(crypto_abbr))
-    if option == messages.ABOVE:
+    if option == price_movement_directions['above']:
         if avg_price > price:
             bot.send_message(chat_id,
                              f'The price of {crypto_abbr} has gone up. It\'s now at {avg_price:.3f}')
-    elif option == messages.BELOW:
+    elif option == price_movement_directions['below']:
         if avg_price < price:
             bot.send_message(chat_id,
                              f'The price of {crypto_abbr} has dropped. It\'s now at {avg_price:.3f}')
 
+# 'View my alerts' button press handling
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('view_all'))
 def view_alerts(m):
@@ -173,6 +187,7 @@ def view_alerts(m):
             message = escape_markdown(message).replace('\\', '', 2)
             bot.send_message(m.chat.id, message, parse_mode='MarkdownV2')
 
+# 'Remove all alerts' button press handling
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('remove_all'))
 def remove_all_alerts(m):
@@ -202,6 +217,7 @@ def deny_all_alerts_deletion(tg_id):
     menu = get_menu_markup()
     bot.send_message(tg_id, messages.OK, reply_markup=menu)
 
+# 'Remove an alert' button press handling
 
 @bot.message_handler(func=lambda message: message.text == buttons.get('remove_one'))
 def remove_alert_by_id(m):
@@ -212,7 +228,7 @@ def remove_alert_by_id(m):
 def handle_alert_id(m):
     alert_id = m.text
     if alert_exists(alert_id) and user_has_alert(m.chat.id, alert_id):
-        db.remove_by_id(alert_id)
+        db.remove_by_id(alert_id, m.chat.id)
         bot.send_message(m.chat.id, f'The alert with id {alert_id} has been deleted successfully.')
     else:
         bot.send_message(m.chat.id, messages.NO_ALERTS_WITH_SUCH_ID)
@@ -238,6 +254,7 @@ def user_exists(user_id):
         exists = True
     return exists
 
+# -------------------------------------------------------
 
 @bot.message_handler(func=lambda message: True)
 def handle_other_messages(m):
