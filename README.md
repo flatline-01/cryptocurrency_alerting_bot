@@ -1,14 +1,15 @@
-
+Cryptocurrency alerting bot 🤖
 ---
 
 Telegram bot for receiving notifications about cryptocurrency price changes. Uses the [BingX API](https://bingx-api.github.io/docs/#/en-us/swapV2/introduce) to obtain cryptocurrency price information. You can use the bot by following the [link](https://t.me/cryptocurrency_alerting_bot).
 
 ### Using Example
 
-![[using_example.mp4]]
+![using_example](https://github.com/user-attachments/assets/a03f04fb-45aa-483b-b75c-1b36c06eef4c)
+
 
 **Bot notification:**
-
+<img width="985" height="291" alt="Screenshot 2025-09-21 180037" src="https://github.com/user-attachments/assets/3aafb844-f90f-4213-a87a-bbb6807c3acb" />
 
 ### Getting started
 
